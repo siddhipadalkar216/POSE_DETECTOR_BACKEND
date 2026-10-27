@@ -1,6 +1,5 @@
 import os
 import base64
-import io
 import re
 from datetime import datetime
 
@@ -8,19 +7,14 @@ from flask import Flask, Response, jsonify, request
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from flask_cors import CORS
-from werkzeug.utils import secure_filename
-from PIL import Image
-import numpy as np
 import requests
 
 # Support running both as a package (python -m server.app) and as a script (python server/app.py)
 try:
     from .models import db_session, init_engine_and_session, Exercise, AttemptLog, User
-    from .pose_analyzer import PoseAnalyzer
     from . import azure_client
 except Exception:  # fallback when __package__ is None
     from models import db_session, init_engine_and_session, Exercise, AttemptLog, User  # type: ignore
-    from pose_analyzer import PoseAnalyzer  # type: ignore
     import azure_client  # type: ignore
 
 # Minimal default catalog to populate dropdown without Azure
@@ -186,8 +180,6 @@ def create_app() -> Flask:
             )
             db_session.add(ex)
         db_session.commit()
-
-    analyzer = PoseAnalyzer()
 
     def _require_auth():
         auth = request.headers.get("Authorization", "")
@@ -393,59 +385,11 @@ def create_app() -> Flask:
         ]
         return jsonify({"exercises": payload}), 200
 
-    def _decode_image_to_rgb_ndarray(image_bytes: bytes) -> np.ndarray:
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        return np.array(image)
-
-    def _read_frame_from_request() -> np.ndarray:
-        if request.content_type and request.content_type.startswith("application/json"):
-            data = request.get_json(silent=True) or {}
-            image_b64 = data.get("image_base64")
-            if not image_b64:
-                raise ValueError("Missing image_base64 in JSON body")
-            if image_b64.startswith("data:"):
-                image_b64 = image_b64.split(",", 1)[1]
-            image_bytes = base64.b64decode(image_b64)
-            return _decode_image_to_rgb_ndarray(image_bytes)
-
-        if "frame" not in request.files:
-            raise ValueError("Missing 'frame' file in form-data")
-        file_storage = request.files["frame"]
-        _ = secure_filename(file_storage.filename) if file_storage.filename else "frame.jpg"
-        image_bytes = file_storage.read()
-        return _decode_image_to_rgb_ndarray(image_bytes)
-
     @app.post("/api/v1/pose/analyze")
     def analyze_pose() -> tuple:
-        if not _require_auth():
-            return jsonify({"error": "Sign in to use pose analysis."}), 401
-        try:
-            image_rgb = _read_frame_from_request()
-        except Exception as exc:
-            return jsonify({"error": f"Invalid image: {exc}"}), 400
-
-        exercise_id = request.args.get("exercise_id")
-        reference_template = None
-        if exercise_id:
-            exercise = None
-            # Accept numeric id or name slug (e.g., "pushup")
-            try:
-                exercise = db_session.get(Exercise, int(exercise_id))
-            except Exception:
-                exercise = db_session.query(Exercise).filter(Exercise.name.ilike(exercise_id.replace('-', ' '))).first()
-            if exercise is not None and exercise.metadata_json:
-                reference_template = {
-                    **exercise.metadata_json,
-                    "exercise_name": exercise.name,
-                }
-            else:
-                try:
-                    reference_template = azure_client.get_exercise_template(exercise_id)
-                except Exception:
-                    reference_template = None
-
-        result = analyzer.analyze(image_rgb, reference_template)
-        return jsonify(result), 200
+        return jsonify({
+            "error": "Pose analysis runs on-device in the frontend. Redeploy the latest client to use it."
+        }), 410
 
     @app.post("/api/v1/logs")
     def create_log() -> tuple:
