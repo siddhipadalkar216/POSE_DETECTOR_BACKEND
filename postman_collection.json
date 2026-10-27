@@ -1,0 +1,53 @@
+{
+  "info": {
+    "name": "Exercise Pose Detector API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5001/api/v1/health"
+      }
+    },
+    {
+      "name": "List Exercises",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5001/api/v1/exercises"
+      }
+    },
+    {
+      "name": "Analyze (JSON base64)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": "http://localhost:5001/api/v1/pose/analyze",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image_base64\": \"<PUT_BASE64_IMAGE_HERE>\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Logs: Create",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": "http://localhost:5001/api/v1/logs",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"exercise_id\": 1,\n  \"score\": 0.9,\n  \"suggestions\": [\"Keep torso upright\"],\n  \"landmarks\": []\n}"
+        }
+      }
+    },
+    {
+      "name": "Logs: List",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5001/api/v1/logs"
+      }
+    }
+  ]
+}
