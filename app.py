@@ -513,7 +513,11 @@ def create_app() -> Flask:
     return app
 
 
+# Vercel's Flask runtime discovers the application through a module-level
+# Flask instance named `app`. Render/Gunicorn can use the same WSGI instance.
+app = create_app()
+
+
 if __name__ == "__main__":
-    app = create_app()
     port = int(os.getenv("PORT", "5001"))
     app.run(host="0.0.0.0", port=port, debug=os.getenv("APP_ENV", "development").lower() != "production")
